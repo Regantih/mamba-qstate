@@ -24,7 +24,7 @@
     "log_every": 8,
     "out_dir": "results/exp0"
   },
-  "git_sha": "unknown",
+  "git_sha": "69773fd43c8448750c79ff85cc6ec3ddbe2dd821",
   "gpu": "cpu",
   "packages": {
     "python": "3.12.8",
@@ -33,5 +33,5 @@
     "numpy": "2.4.6",
     "mamba_ssm": "not-installed"
   },
-  "timestamp_utc": "2026-06-20T21:44:56.379428+00:00"
+  "timestamp_utc": "2026-06-20T22:02:17.195276+00:00"
 }
