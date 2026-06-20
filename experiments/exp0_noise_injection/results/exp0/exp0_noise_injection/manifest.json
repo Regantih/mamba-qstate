@@ -1,0 +1,37 @@
+{
+  "run_name": "exp0_noise_injection",
+  "seed": 1337,
+  "config": {
+    "run_name": "exp0_noise_injection",
+    "seed": 1337,
+    "model": "state-spaces/mamba2-1.3b",
+    "device": "cpu_sim",
+    "max_new_tokens": 512,
+    "num_prompts": 16,
+    "prompt_source": "pile_val",
+    "noise_levels": [
+      0.0,
+      0.004,
+      0.01,
+      0.03,
+      0.1
+    ],
+    "refresh_intervals": [
+      0,
+      16,
+      64
+    ],
+    "log_every": 8,
+    "out_dir": "results/exp0"
+  },
+  "git_sha": "unknown",
+  "gpu": "cpu",
+  "packages": {
+    "python": "3.12.8",
+    "torch": "2.12.1+cpu",
+    "transformers": "5.12.1",
+    "numpy": "2.4.6",
+    "mamba_ssm": "not-installed"
+  },
+  "timestamp_utc": "2026-06-20T21:44:56.379428+00:00"
+}

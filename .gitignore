@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.env
+
+# Models / checkpoints (never commit weights)
+*.bin
+*.safetensors
+*.pt
+*.pth
+checkpoints/
+hf_cache/
+
+# Results — keep summaries, drop bulk
+results/**/raw/
+results/**/*.npz
+results/**/*.npy
+*.log
+
+# OS / editor
+.DS_Store
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# Paper build artifacts
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.out
+paper/*.synctex.gz

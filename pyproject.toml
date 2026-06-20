@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qstate"
+version = "0.1.0"
+description = "Quantized recurrent state for Mamba-2 inference: studying compounding quantization error and periodic full-precision refresh."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Mamba-QState Project" }]
+dependencies = [
+  "torch>=2.2",
+  "numpy>=1.26",
+  "transformers>=4.43",
+  "einops>=0.8",
+  "pyyaml>=6.0",
+  "tqdm>=4.66",
+  "scipy>=1.13",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "matplotlib>=3.9", "pandas>=2.2"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

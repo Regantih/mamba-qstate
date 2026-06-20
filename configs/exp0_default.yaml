@@ -1,0 +1,24 @@
+# Experiment 0 — noise-injection de-risk.
+# Question: does KL(full || perturbed) over next-token dist grow super-linearly
+# with generation length? Validates the compounding-error hypothesis cheaply.
+
+run_name: exp0_noise_injection
+seed: 1337
+model: state-spaces/mamba2-1.3b      # swap to mamba2-2.7b for the scaled check
+device: cuda                         # 'cpu_sim' uses the synthetic SSM (sandbox)
+
+# Generation
+max_new_tokens: 512                  # long enough to see compounding
+num_prompts: 16                      # average over prompts to reduce variance
+prompt_source: pile_val             # 'pile_val' | 'builtin' (cpu_sim uses builtin)
+
+# Noise sweep — relative Gaussian std injected into the recurrent state each step.
+# Calibrated to mimic 8-bit (~0.004), 4-bit (~0.03), and stress (0.1) error.
+noise_levels: [0.0, 0.004, 0.01, 0.03, 0.1]
+
+# Refresh check: also test whether refresh every-k contains the error.
+refresh_intervals: [0, 16, 64]       # 0 = never refresh
+
+# Logging cadence: record KL every N steps to fit the growth curve.
+log_every: 8
+out_dir: results/exp0

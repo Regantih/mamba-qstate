@@ -1,0 +1,34 @@
+# Main experiment — 3x3x3 = 27 cells + 3 ablations.
+# Axis 1: bit-width of the recurrent state quantizer
+# Axis 2: refresh interval (full-precision refresh every k steps)
+# Axis 3: task (long-context retrieval, QA, perplexity)
+
+run_name: main_sweep
+seed: 1337
+model: state-spaces/mamba2-2.7b      # 1.3b for the cheap de-risk pass first
+device: cuda
+
+bit_widths: [8, 4, 3]                 # 3 levels (16-bit = baseline reference)
+refresh_intervals: [0, 64, 16]       # never / sparse / frequent
+tasks: [retrieval, qa, perplexity]   # 3 tasks
+
+quant:
+  granularity: per_head              # default; ablation A2 varies this
+  symmetric: true
+
+# Eval sizing — keep modest to fit the $150-250 budget.
+eval:
+  retrieval: { name: niah_single, context_lens: [2000, 8000, 16000], n: 50 }
+  qa:        { name: squad_v2_subset, n: 200 }
+  perplexity:{ name: pile_val, n_tokens: 50000 }
+
+out_dir: results/main
+
+# --- Ablations (run after the main grid) ---
+ablations:
+  A1_outlier_protect:                # keep top-x% state magnitudes in fp16
+    keep_fraction: [0.0, 0.01, 0.05]
+  A2_granularity:                    # where does the error budget live?
+    granularity: [per_tensor, per_head, per_channel]
+  A3_warmup_refresh:                 # dense refresh early, sparse later
+    schedule: [constant, decaying, prompt_only]

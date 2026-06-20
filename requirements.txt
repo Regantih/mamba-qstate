@@ -1,0 +1,27 @@
+# Core — pinned loosely for reproducibility; lock exact versions on the GPU box.
+# Mamba-2 official kernels require CUDA. Install torch matching the box's CUDA.
+torch>=2.2,<2.6
+numpy>=1.26,<2.1
+transformers>=4.43
+tokenizers>=0.19
+safetensors>=0.4
+einops>=0.8
+
+# Mamba-2 SSM kernels (install on GPU box; needs nvcc/CUDA toolkit)
+# mamba-ssm>=2.2.2
+# causal-conv1d>=1.4.0
+
+# Eval / data
+datasets>=2.20
+scipy>=1.13
+pandas>=2.2
+
+# Config / experiment management
+pyyaml>=6.0
+tqdm>=4.66
+
+# Plotting (paper figures)
+matplotlib>=3.9
+
+# Dev
+pytest>=8.0
