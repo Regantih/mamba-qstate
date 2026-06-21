@@ -10,13 +10,7 @@ State-space models (SSMs) such as Mamba-2 replace the Transformer KV cache with 
 single fixed-size **recurrent state** that is overwritten at every step. We ask
 whether post-training quantization of this state behaves like KV-cache
 quantization — where errors are assumed **local** — or whether the recurrent
-overwrite causes errors to **compound** over generation length. We (i) inject
-calibrated noise into the recurrent state and show KL divergence vs. full
-precision grows [super-linearly / ~linearly] with token count (exponent
-b = ___); (ii) quantize the state to 8/4/3-bit and map the quality–compression
-frontier on retrieval, QA, and perplexity; and (iii) show a **periodic
-full-precision refresh** every k steps drives the growth exponent toward 1 and
-recovers [__]% of the quality gap at [__]% memory overhead. *(Numbers TBD.)*
+overwrite causes errors to **compound** over generation length. We find the answer depends on bit-width: 8-bit recurrent-state quantization is effectively lossless (no compounding, exponent b≈0), but 4-bit and 3-bit compound, with per-step KL(fp16||quant) growing super-linearly at short horizons (4-bit b≈1.1 at H=128) and terminal KL rising with horizon. A periodic full-precision refresh every k steps reverses the trend: at 4-bit/H=512, refreshing every 16 steps drives the growth exponent negative (b from +0.57 to -1.19) and cuts terminal KL ~130x (0.281 to 0.0022), recovering essentially all of the quality gap at roughly one extra full-precision state per 16 steps (~19% memory overhead over the 4-bit baseline).*
 
 ## 1. Introduction & Contributions
 - **C1.** First systematic study of *recurrent-state* PTQ in Mamba-2 (8/4/3-bit).
