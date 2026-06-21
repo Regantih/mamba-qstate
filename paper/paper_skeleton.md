@@ -51,6 +51,7 @@ recovers [__]% of the quality gap at [__]% memory overhead. *(Numbers TBD.)*
 
 ## 5. Results
 - **5.1 Compounding.** Exp-0 + main: b across bit-widths/lengths. *(figure: KL-vs-step, log-log)*
+  Across all conditions the recurrent-state quantization error is **sub-linear**, not compounding: the fitted growth exponent b is below 1 in every case (8-bit b approx 0.68-0.80; 4-bit b approx 0.27-0.32). Periodic full-precision refresh (k in {0,16,64}) barely shifts b, consistent with no error build-up to contain. Fits are noisy (R^2 approx 0.34-0.46) on the short de-risk run; the strengthened run (32 prompts, 2048 tokens) re-tests this with more statistical power. See `paper/figures/exp0_kl_growth.png`. **This inverts the original hypothesis: SSM state appears robust to aggressive quantization.**
 - **5.2 Compression frontier.** Quality vs. bits per task. *(figure: Pareto)*
 - **5.3 Refresh containment.** b and quality vs. k; overhead trade-off. *(figure)*
 - **5.4 Ablations.** Outlier protection, granularity, refresh schedule.
