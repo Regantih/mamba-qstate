@@ -1,0 +1,47 @@
+{
+  "config": {
+    "model": "state-spaces/mamba2-1.3b",
+    "ctxlen": 200,
+    "ntrial_per_cell": 10,
+    "seeds": [
+      1337,
+      2024,
+      7
+    ],
+    "depths": [
+      0.25,
+      0.75
+    ],
+    "gen": 12
+  },
+  "recall": {
+    "bits16": {
+      "hits": 60,
+      "trials": 60,
+      "acc": 1.0,
+      "ci95_lo": 0.9398,
+      "ci95_hi": 1.0
+    },
+    "bits8": {
+      "hits": 60,
+      "trials": 60,
+      "acc": 1.0,
+      "ci95_lo": 0.9398,
+      "ci95_hi": 1.0
+    },
+    "bits4": {
+      "hits": 6,
+      "trials": 60,
+      "acc": 0.1,
+      "ci95_lo": 0.0466,
+      "ci95_hi": 0.2015
+    },
+    "bits3": {
+      "hits": 14,
+      "trials": 60,
+      "acc": 0.2333,
+      "ci95_lo": 0.1444,
+      "ci95_hi": 0.3544
+    }
+  }
+}

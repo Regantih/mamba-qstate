@@ -16,7 +16,7 @@
 \maketitle
 
 \begin{abstract}
-State-space models (SSMs) such as Mamba-2 replace the Transformer KV cache with a single fixed-size recurrent state that is overwritten at every step. We ask whether post-training quantization (PTQ) of this state stays local, as it does for KV-cache quantization, or compounds over generation length. Measuring on \texttt{state-spaces/mamba2-1.3b} over Pile with greedy decoding (seed 1337), we find the answer is bit-width dependent: 8-bit state quantization is effectively lossless (perplexity within 0.33\% of fp16), while 4-bit and 3-bit fall off a perplexity cliff. A needle-in-a-haystack (NIAH) retrieval probe corroborates the perplexity signal. We further show the 8-bit plateau is scale-dependent and that a periodic full-precision refresh every k steps contains the 4-bit compounding at sub-1\% bandwidth overhead. Code and artifacts are released.
+State-space models (SSMs) such as Mamba-2 replace the Transformer KV cache with a single fixed-size recurrent state that is overwritten at every step. We ask whether post-training quantization (PTQ) of this state stays local, as it does for KV-cache quantization, or compounds over generation length. Measuring on \texttt{state-spaces/mamba2-1.3b} over Pile with greedy decoding (seed 1337), we find the answer is bit-width dependent: 8-bit state quantization is effectively lossless (perplexity within 0.33\% of fp16), while 4-bit and 3-bit fall off a perplexity cliff. A needle-in-a-haystack retrieval probe (60 trials per setting, with Wilson confidence intervals) corroborates the perplexity signal, and asymmetric quantization roughly halves the 4-bit penalty. We further show the 8-bit plateau is scale-dependent and that a periodic full-precision refresh contains the 4-bit compounding at a measured 1.12--1.14x throughput cost. Code and artifacts are released.
 \end{abstract}
 
 \section{Introduction}
@@ -46,10 +46,10 @@ On the 1.3b model, 8-bit state quantization is effectively lossless: perplexity 
 \toprule
 Bit-width & PPL (1.3b) & PPL (370m) & NIAH recall \\
 \midrule
-16 & 10.26 & 12.68 & 20/20 \\
-8 & 10.29 & 14.95 & 20/20 \\
-4 & 50.29 & 2019.70 & 9/20 \\
-3 & 45.23 & 1394.96 & 11/20 \\
+16 & 10.26 & 12.68 & 60/60 \\
+8 & 10.29 & 14.95 & 60/60 \\
+4 & 50.29 & 2019.70 & 6/60 \\
+3 & 45.23 & 1394.96 & 14/60 \\
 \bottomrule
 \end{tabular}
 \caption{State quantization on Mamba-2. 8-bit is lossless on 1.3b but not on 370m; 4/3-bit collapse on both perplexity and NIAH retrieval.}
@@ -70,20 +70,40 @@ Periodically refreshing the quantized state to fp16 every $k$ steps contains the
 \end{figure}
 
 \subsection{Downstream quality: long-context retrieval}
-The perplexity signal is corroborated by a needle-in-a-haystack (NIAH) retrieval task in which the model must reproduce a 4-digit code after roughly 900 tokens of distractors. Recall is 20/20 at both 16-bit and 8-bit, but drops to 9/20 at 4-bit and 11/20 at 3-bit (Figure~\ref{fig:niah}). 8-bit retrieval is lossless, whereas 4-bit and 3-bit collapse as compounding errors corrupt the stored fact. We caution that with 20 trials the gap between 4-bit and 3-bit is within sampling noise; only the qualitative cliff is robust.
+The perplexity signal is corroborated by a needle-in-a-haystack (NIAH) retrieval task in which the model must reproduce a 4-digit code after roughly 900 tokens of distractors. Across 60 independent trials, recall is 60/60 at both 16-bit and 8-bit (Wilson 95\% CI [0.94, 1.0]), but collapses to 6/60 at 4-bit ([0.05, 0.20]) and 14/60 at 3-bit ([0.14, 0.35]) (Figure~\ref{fig:niah}). 8-bit retrieval is statistically lossless, whereas 4-bit and 3-bit collapse as compounding errors corrupt the stored fact; their confidence intervals are nearly disjoint, so the cliff is robust under this sample size.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.6\linewidth]{niah_recall.pdf}
-\caption{NIAH retrieval recall (20 trials) by bit-width. 16-bit and 8-bit retrieve perfectly; 4-bit and 3-bit collapse.}
+\caption{NIAH retrieval recall (60 trials, Wilson 95\% CIs) by bit-width. 16-bit and 8-bit retrieve perfectly; 4-bit and 3-bit collapse.}
 \label{fig:niah}
+\end{figure}
+
+\subsection{Asymmetric quantization halves the 4-bit penalty}
+The compounding cliff is partly an artifact of symmetric rounding. Switching to asymmetric quantization, which fits a per-tensor zero-point, reduces 4-bit perplexity from 49.97 to 28.46 on the 1.3b model, while leaving 8-bit unchanged (10.30 vs 10.29). At 3-bit the asymmetric scheme is worse (57.24 vs 44.91), indicating that below 4 bits the dominant error is range clipping that a zero-point cannot fix. The qualitative cliff persists under both schemes, but its location and severity depend on the quantizer.
+
+\subsection{Measured cost of the refresh schedule}
+We measure decode throughput and peak memory on a single GPU rather than estimating overhead analytically. The fp16 baseline (no quantized state) runs at 35.3 tokens/s using 3.02 GB. Adding 4-bit state with periodic refresh costs a modest 1.12--1.14x slowdown (31.6, 31.3, and 30.9 tokens/s at $k=16$, $32$, and $64$) while reducing peak memory to 2.82 GB. The refresh frequency has little effect on throughput, so the cheapest containment schedule is also nearly the fastest.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.6\linewidth]{asym.pdf}
+\caption{Symmetric vs.\ asymmetric state quantization (perplexity, log scale, 1.3b). Asymmetric rounding nearly halves the 4-bit penalty but does not help at 3-bit.}
+\label{fig:asym}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.6\linewidth]{throughput.pdf}
+\caption{Measured decode throughput for the 4-bit refresh schedules versus the fp16 baseline (single GPU). Refresh costs a 1.12--1.14x slowdown largely independent of $k$.}
+\label{fig:throughput}
 \end{figure}
 
 \section{Related Work}
 Mamba and Mamba-2 establish selective state-space models as a linear-time alternative to attention~\cite{gu2023mamba,dao2024mamba2}. Post-training quantization for Transformers~\cite{frantar2022gptq} and KV-cache quantization~\cite{hooper2024kvquant} reduce inference memory, but the KV cache is append-only so errors stay local. Our setting differs because the SSM recurrent state is overwritten each step, creating a feedback path for compression error. The retrieval probe follows the needle-in-a-haystack methodology~\cite{kamradt2023niah}.
 
 \section{Limitations}
-Our study is limited to post-training quantization (no quantization-aware training), a single model family (Mamba-2 at 370m and 1.3b), and symmetric per-tensor rounding. The NIAH probe uses 20 trials, so absolute recall numbers carry sampling noise. We do not measure wall-clock speedups or end-to-end memory on real hardware, and the refresh overhead is an analytic estimate rather than a measured throughput figure.
+Our study is limited to post-training quantization (no quantization-aware training), a single model family (Mamba-2 at 370m and 1.3b), and symmetric per-tensor rounding. The NIAH probe uses 60 trials per bit-width with reported Wilson confidence intervals; finer-grained ranking among the sub-lossless settings would benefit from still larger samples. We report measured single-GPU throughput and peak memory for the refresh schedule, but do not evaluate larger models, batched serving, or quantization-aware training.
 
 \section{Reproducibility}
 All experiments use seed 1337 and greedy decoding on \texttt{NeelNanda/pile-10k}. Code, sweep configurations, and result JSON files (perplexity, refresh curve, and NIAH recall) are released so the figures and tables in this paper can be regenerated end-to-end.

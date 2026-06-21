@@ -1,0 +1,21 @@
+{
+  "baseline_int8_equiv": {
+    "tok_per_s": 35.32,
+    "peak_gb": 3.021
+  },
+  "k16": {
+    "tok_per_s": 31.58,
+    "peak_gb": 2.817,
+    "slowdown_vs_base": 1.1184
+  },
+  "k32": {
+    "tok_per_s": 31.31,
+    "peak_gb": 2.817,
+    "slowdown_vs_base": 1.1283
+  },
+  "k64": {
+    "tok_per_s": 30.92,
+    "peak_gb": 2.817,
+    "slowdown_vs_base": 1.1425
+  }
+}

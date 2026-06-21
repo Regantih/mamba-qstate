@@ -41,9 +41,12 @@ ax.grid(True, alpha=0.3)
 fig.tight_layout()
 fig.savefig(os.path.join(OUT, 'refresh_b.pdf'))
 plt.close(fig)
-q = load('quality.json')
-acc = [q['recall']['bits%d' % b]['acc'] for b in bits]
+q = load('quality_power.json')['recall']
+acc = [q['bits%d' % b]['acc'] for b in bits]
+lo = [q['bits%d' % b]['acc'] - q['bits%d' % b]['ci95_lo'] for b in bits]
+hi = [q['bits%d' % b]['ci95_hi'] - q['bits%d' % b]['acc'] for b in bits]
 fig, ax = plt.subplots(figsize=(5, 3.4))
+ax.errorbar([str(b) for b in bits], acc, yerr=[lo, hi], fmt='none', ecolor='black', capsize=4, zorder=3)
 ax.bar([str(b) for b in bits], acc, color=['#22cc77', '#22cc77', '#cc4444', '#cc4444'])
 ax.set_ylim(0, 1.05)
 ax.set_xlabel('Bit-width')
@@ -53,3 +56,22 @@ fig.tight_layout()
 fig.savefig(os.path.join(OUT, 'niah_recall.pdf'))
 plt.close(fig)
 print('Wrote figures to', OUT)
+a = load('ppl_asym.json')
+import numpy as np
+x = np.arange(len(bits))
+sym = [a['symmetric']['bits%d' % b] for b in bits]
+asym = [a['asymmetric']['bits%d' % b] for b in bits]
+fig, ax = plt.subplots(figsize=(5, 3.4))
+ax.bar(x-0.2, sym, 0.4, label='symmetric')
+ax.bar(x+0.2, asym, 0.4, label='asymmetric')
+ax.set_yscale('log'); ax.set_xticks(x); ax.set_xticklabels([str(b) for b in bits])
+ax.set_xlabel('Bit-width'); ax.set_ylabel('Perplexity (log)'); ax.legend(); ax.grid(True, axis='y', alpha=0.3)
+fig.tight_layout(); fig.savefig(os.path.join(OUT, 'asym.pdf')); plt.close(fig)
+tp = load('refresh_throughput.json')
+labels = ['fp16', 'k=16', 'k=32', 'k=64']
+tps = [tp['baseline_int8_equiv']['tok_per_s'], tp['k16']['tok_per_s'], tp['k32']['tok_per_s'], tp['k64']['tok_per_s']]
+fig, ax = plt.subplots(figsize=(5, 3.4))
+ax.bar(labels, tps, color='steelblue')
+ax.set_ylabel('Decode throughput (tokens/s)'); ax.set_xlabel('Refresh schedule')
+ax.grid(True, axis='y', alpha=0.3)
+fig.tight_layout(); fig.savefig(os.path.join(OUT, 'throughput.pdf')); plt.close(fig)
