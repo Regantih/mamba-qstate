@@ -80,11 +80,11 @@ overwrite causes errors to **compound** over generation length. We find the answ
   corrects an earlier synthetic-proxy analysis
   that suggested an 8-bit crossover.
 - **5.2 Compression frontier (real, mamba2-1.3b, Pile, per-token PPL).** Quantizing only the recurrent state trades memory for quality, and the frontier is sharply non-linear:
-    - **16-bit (1.0x):** PPL 10.51 (baseline).
-    - **8-bit (2.0x):** PPL 10.54 (+0.3%); terminal KL 0.004. On the frontier - effectively lossless.
-    - **4-bit (4.0x):** PPL 29.19 (+178%); terminal KL 0.131. Dominated - quality collapses.
-    - **3-bit (5.3x):** PPL 23.69 (+125%); terminal KL 1.80. Also dominated; high variance at 8 prompts.
-    - **Takeaway:** the only Pareto-optimal compressed point is 8-bit (2x smaller state, no measurable quality loss). Below 8-bit the recurrent overwrite compounds quantization error into a >2x perplexity cliff, so static sub-8-bit state quantization is not usable without the periodic refresh of 5.3. (data: results/exp1/ppl.json, results/exp1/diagnostics/frontier.json)
+    - **16-bit (1.0x):** PPL 10.26 (baseline).
+    - **8-bit (2.0x):** PPL 10.29 (+0.33%); terminal KL 0.004. On the frontier - effectively lossless.
+    - **4-bit (4.0x):** PPL 50.29 (+390%); terminal KL 0.131. Dominated - quality collapses.
+    - **3-bit (5.3x):** PPL 45.23 (+341%); terminal KL 1.80. Also dominated; high variance at 8 prompts.
+    - **Takeaway:** the only Pareto-optimal compressed point is 8-bit (2x smaller state, no measurable quality loss). Below 8-bit the recurrent overwrite compounds quantization error into a ~5x perplexity cliff, so static sub-8-bit state quantization is not usable without the periodic refresh of 5.3. (NP=24 prompts, SEQ=512; data: results/exp1/ppl.json, results/exp1/frontier.json)
 - **5.3 Refresh containment (real, 4-bit, H=512).**
   *(figs: results/exp1/figs/refresh_kl.png,
   results/exp1/figs/refresh_b_vs_k.png; data:

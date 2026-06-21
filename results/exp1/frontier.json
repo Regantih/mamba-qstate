@@ -1,0 +1,25 @@
+{
+  "config": {
+    "NP": 24,
+    "SEQ": 512,
+    "note": "high-confidence re-run resolving 3b/4b noise anomaly"
+  },
+  "ppl": {
+    "bits16": 10.259092520155848,
+    "bits8": 10.293323926355795,
+    "bits4": 50.29138888547933,
+    "bits3": 45.23297650964756
+  },
+  "delta_vs_fp16": {
+    "bits16": 0.0,
+    "bits8": 0.0342,
+    "bits4": 40.0323,
+    "bits3": 34.9739
+  },
+  "pct_vs_fp16": {
+    "bits16": 0.0,
+    "bits8": 0.33,
+    "bits4": 390.21,
+    "bits3": 340.91
+  }
+}

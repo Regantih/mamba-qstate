@@ -23,11 +23,11 @@ Figure: results/exp1/figs/exp1_kl_growth.png, exp1_terminal_kl.png. Data: result
 ### 3.2 Quality-compression frontier (per-token PPL)
 | Bits | Compression | PPL | dPPL vs fp16 | Terminal KL (H=512) | On frontier |
 |------|-------------|-------|--------------|---------------------|-------------|
-| 16   | 1.0x        | 10.51 | 0.0%         | 0.000               | baseline    |
-| 8    | 2.0x        | 10.54 | +0.3%        | 0.004               | yes         |
-| 4    | 4.0x        | 29.19 | +178%        | 0.131               | no          |
-| 3    | 5.3x        | 23.69 | +125%        | 1.800               | no          |
-The only Pareto-optimal compressed point is 8-bit (2x smaller state, no measurable quality loss). Below 8-bit the recurrent overwrite compounds quantization error into a >2x perplexity cliff, so static sub-8-bit state quantization is not usable without refresh. Data: results/exp1/ppl.json; results/exp1/diagnostics/frontier.json.
+| 16   | 1.0x        | 10.26 | 0.0%         | 0.000               | baseline    |
+| 8    | 2.0x        | 10.29 | +0.33%        | 0.004               | yes         |
+| 4    | 4.0x        | 50.29 | +390%        | 0.131               | no          |
+| 3    | 5.3x        | 45.23 | +341%        | 1.800               | no          |
+The only Pareto-optimal compressed point is 8-bit (2x smaller state, no measurable quality loss). Below 8-bit the recurrent overwrite compounds quantization error into a ~5x perplexity cliff, so static sub-8-bit state quantization is not usable without refresh. Data: results/exp1/ppl.json; results/exp1/diagnostics/frontier.json.
 
 ### 3.3 Refresh containment (4-bit, H=512)
 A periodic full-precision refresh every k steps contains 4-bit compounding. Without refresh (k=0) the exponent is b=0.57 (terminal KL 0.281). Refreshing every 16 steps drops it to b=-1.19 (terminal KL 0.0022, ~130x lower); every 64 steps gives b=-2.43 (terminal KL 0.0010, ~280x lower). A negative exponent means the periodic reset removes error faster than the recurrence accumulates it, so compounding is eliminated even at low (k=64) refresh overhead.
