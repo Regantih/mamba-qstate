@@ -50,11 +50,44 @@ recovers [__]% of the quality gap at [__]% memory overhead. *(Numbers TBD.)*
 - Compute: on-demand H100 (see docs/COMPUTE.md); full reproducibility manifests.
 
 ## 5. Results
-- **5.1 Compounding.** Exp-0 + main: b across bit-widths/lengths. *(figure: KL-vs-step, log-log)*
-  Our central observable is the growth exponent b in a power-law fit KL(full || quant) = a * t^b over generation length t (log-log). We sweep three decode horizons on Mamba-2 1.3B over 32 pile_val prompts (seed 1337), revealing a clear bit-width- and horizon-dependent regime. **8-bit state quantization crosses from sub-linear to super-linear (compounding) as the horizon grows**: b(refresh0) = 0.47 at 512 tokens (noisy, R^2=0.29), 1.06 at 1024 tokens (R^2=0.71), and 1.36 at 2048 tokens (R^2=0.85); the crossover through b=1 occurs near 1024 tokens, and refresh k in {16,64} does not change it (b = 1.13/1.06 at 1024, 1.47/1.33 at 2048). In contrast, **4-bit stays sub-linear and horizon-stable** (b = 0.41, 0.42, 0.45 at 512/1024/2048; R^2 up to 0.88). A per-prompt diagnostic (32 prompts, 2048 tokens, 8-bit refresh0) confirms the compounding is not outlier-driven: median per-prompt b = 1.44 and 27/32 prompts are individually super-linear (b range 0.54-2.83). We verified the quantizer: per-step 8-bit relative L2 state error (0.008) is ~18x smaller than 4-bit (0.145), and >=16-bit is a no-op (error 0). Thus the effect is dynamical, not a magnitude artifact: the small, structured 8-bit perturbation is amplified by the SSM recurrence over long horizons, whereas the larger 4-bit perturbation saturates sub-linearly. Full-precision controls yield KL~0 (b=nan). Figures: exp0_kl_growth.png (512), exp0_kl_growth_h1024.png (1024), exp0_kl_growth_strong.png (2048); crossover table in results/exp0/diagnostics/horizon_crossover.json.
-- **5.2 Compression frontier.** Quality vs. bits per task. *(figure: Pareto)*
-- **5.3 Refresh containment.** b and quality vs. k; overhead trade-off. *(figure)*
-- **5.4 Ablations.** Outlier protection, granularity, refresh schedule.
+- **5.1 Compounding (real Mamba-2 1.3B).** 
+  *(figs: results/exp1/figs/exp1_kl_growth.png,
+  results/exp1/figs/exp1_terminal_kl.png;
+  data: results/exp1/sweep.json; summary:
+  results/exp1/diagnostics/horizon_crossover.json)*
+
+  We track KL(fp16 || quant) between the
+  recurrent-state-quantized model and the
+  full-precision reference, fit as KL ~ a*t^b
+  over decode horizon t. We sweep horizons 128
+  and 512 on the real Mamba-2 1.3B model over 12
+  Pile prompts, quantizing the SSM recurrent
+  state at 16/8/4/3 bits (16-bit = lossless
+  control). Results show a monotone bit-width
+  threshold, not a horizon-induced 8-bit
+  crossover:
+
+  - **8-bit: no compounding.** b is null at
+    both horizons (b=-0.15, R2=0.05 at H=128;
+    b=0.13, R2=0.007 at H=512); terminal KL
+    negligible (7.1e-4 at H=128, 3.9e-3 at
+    H=512). Effectively lossless.
+  - **4-bit: compounds.** Positive exponent
+    (b=1.13, R2=0.85 at H=128; b=0.49, R2=0.39
+    at H=512); terminal KL grows with horizon
+    (0.073 at H=128 to 0.131 at H=512).
+  - **3-bit: diverges.** Severe compounding
+    (b=0.81 at H=128; b=1.13, R2=0.67 at H=512);
+    terminal KL 0.27 (H=128) to 1.80 (H=512).
+
+  16-bit controls give KL=0 by construction.
+  Takeaway: 8 bits is safe; 4 bits and below
+  incur horizon-dependent compounding. This
+  corrects an earlier synthetic-proxy analysis
+  that suggested an 8-bit crossover.
+- **5.2 Compression frontier.** *(Pareto)*
+- **5.3 Refresh containment.** overhead vs k.
+- **5.4 Ablations.** outliers, granularity.
 
 ## 6. Discussion & Limitations
 - When does compounding bite (length, task, bit-width)? Model-size sensitivity.
