@@ -44,10 +44,10 @@ recovers [__]% of the quality gap at [__]% memory overhead. *(Numbers TBD.)*
   full precision; sweep k. Cost model: memory/compute overhead vs. k.
 
 ## 4. Experimental Setup
-- Models: mamba2-1.3b (de-risk), mamba2-2.7b (main). Greedy decoding, fixed seed.
-- Tasks: NIAH long-context retrieval, SQuAD-v2 subset (EM/F1), Pile-val PPL.
-- Grid: bit ∈ {8,4,3} × refresh ∈ {0,64,16} × task; + 3 ablations.
-- Compute: on-demand H100 (see docs/COMPUTE.md); full reproducibility manifests.
+- Model: mamba2-1.3b (state-spaces). Greedy decoding, fixed seed 1337.
+- Data: 12 Pile (NeelNanda/pile-10k) prompts. Metric: per-step KL(fp16 || quant) of the recurrent-state-quantized model vs full precision.
+- Grid: bits ∈ {16,8,4,3} × horizon ∈ {128,512}, refresh=0; plus a refresh sweep (k ∈ {0,16,64}) at 4-bit, H=512.
+- Compute: single on-demand GPU (RunPod). Scripts: experiments/exp1_real_quant/{run,resume,refresh_sweep}.py; results under results/exp1/.
 
 ## 5. Results
 - **5.1 Compounding (real Mamba-2 1.3B).** 
@@ -86,7 +86,23 @@ recovers [__]% of the quality gap at [__]% memory overhead. *(Numbers TBD.)*
   corrects an earlier synthetic-proxy analysis
   that suggested an 8-bit crossover.
 - **5.2 Compression frontier.** *(Pareto)*
-- **5.3 Refresh containment.** overhead vs k.
+- **5.3 Refresh containment (real, 4-bit, H=512).**
+  *(figs: results/exp1/figs/refresh_kl.png,
+  results/exp1/figs/refresh_b_vs_k.png; data:
+  results/exp1/refresh.json; summary:
+  results/exp1/diagnostics/refresh_summary.json)*
+  A periodic full-precision refresh of the
+  recurrent state every k steps contains 4-bit
+  compounding. Without refresh (k=0) the
+  exponent is b=0.57 with terminal KL 0.281.
+  Refreshing every 16 steps drops the exponent
+  to b=-1.19 and terminal KL to 0.0022 (about
+  130x lower); every 64 steps gives b=-2.43
+  and terminal KL 0.0010 (about 280x lower).
+  A negative exponent means the periodic reset
+  removes error faster than the recurrence
+  accumulates it, so compounding is eliminated
+  even at low (k=64) refresh overhead.
 - **5.4 Ablations.** outliers, granularity.
 
 ## 6. Discussion & Limitations
