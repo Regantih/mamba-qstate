@@ -199,11 +199,16 @@ def run_cuda(cfg: dict) -> dict:
     conditions = [(bw, rf) for bw in cfg["bit_widths"] for rf in cfg["refresh_intervals"]]
     results = {}
 
+    fp_cache = []
+    for prompt_ids in prompts:
+        msl = prompt_ids.shape[1] + max_new + 1
+        fp_cache.append(_fp_reference(model, prompt_ids, max_new, msl))
+
     for bits, refresh in conditions:
         kl_accum = {}
-        for prompt_ids in prompts:
+        for pi, prompt_ids in enumerate(prompts):
             max_seqlen = prompt_ids.shape[1] + max_new + 1
-            chosen, fp_logits = _fp_reference(model, prompt_ids, max_new, max_seqlen)
+            chosen, fp_logits = fp_cache[pi]
             if bits >= 16 and refresh == 0:
                 # FP-vs-FP control: KL must be ~0 everywhere (sanity).
                 pol_logits = fp_logits
