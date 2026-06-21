@@ -21,6 +21,13 @@
 State-space models (SSMs) such as Mamba-2 replace the Transformer KV cache with a single fixed-size recurrent state that is overwritten at every step. We ask whether post-training quantization (PTQ) of this state stays local, as it does for KV-cache quantization, or compounds over generation length. Measuring on \texttt{state-spaces/mamba2-1.3b} over Pile with greedy decoding (seed 1337), we find the answer is bit-width dependent: 8-bit state quantization is effectively lossless (perplexity within 0.33\% of fp16), while 4-bit and 3-bit fall off a perplexity cliff. A needle-in-a-haystack retrieval probe (60 trials per setting, with Wilson confidence intervals) corroborates the perplexity signal, and asymmetric quantization roughly halves the 4-bit penalty. We further show the 8-bit plateau is scale-dependent and that a periodic full-precision refresh contains the 4-bit compounding at a measured 1.12--1.14x throughput cost. Code and artifacts are released.
 \end{abstract}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{hero_qstate.pdf}
+\caption{Overview. (A) NIAH recall by recurrent-state bit-width (n=60, Wilson 95\% CIs): quantization is lossless to 8-bit but collapses sharply at 4-bit and below. (B) The post-training pipeline: quantize the recurrent state, generate, and optionally refresh to full precision every $k$ steps to contain error. (C) The measured cost--quality Pareto across bit-widths (asymmetric quantization).}
+\label{fig:hero}
+\end{figure}
+
 \section{Introduction}
 Transformer inference caches one key-value pair per token, so quantization error introduced into any cached entry stays attached to that token and does not propagate. Selective SSMs such as Mamba-2 instead carry a single recurrent state that is overwritten at every step, so an error introduced at one step is fed back into the next. This raises the question of whether compression errors compound rather than stay local.
 
