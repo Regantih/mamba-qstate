@@ -135,47 +135,51 @@ def _make_inference_params(model, batch_size: int, max_seqlen: int):
 
 
 @torch.no_grad()
-def _fp_reference(model, prompt_ids, max_new_tokens, max_seqlen):
-    """Greedy FP decode. Returns (chosen_tokens[list[int]], fp_logits[list[(vocab,)]])."""
-    ip = _make_inference_params(model, prompt_ids.shape[0], max_seqlen)
-    # Prefill prompt.
-    out = model(prompt_ids, inference_params=ip, num_last_tokens=1)
-    ip.seqlen_offset += prompt_ids.shape[1]
-    logits = out.logits[:, -1, :]                     # (1, vocab)
-    chosen, fp_logits = [], []
-    for _ in range(max_new_tokens):
-        fp_logits.append(logits[0])
-        nxt = logits.argmax(dim=-1, keepdim=True)     # (1,1) greedy
-        chosen.append(int(nxt.item()))
+def _fp_reference(model, prompt_batch, max_new_tokens, max_seqlen, log_every):
+    B = prompt_batch.shape[0]
+    ip = _make_inference_params(model, B, max_seqlen)
+    out = model(prompt_batch, inference_params=ip, num_last_tokens=1)
+    ip.seqlen_offset += prompt_batch.shape[1]
+    logits = out.logits[:, -1, :]
+    chosen = []
+    kept = []
+    for t in range(max_new_tokens):
+        if (t + 1) % log_every == 0:
+            kept.append(logits)
+        nxt = logits.argmax(dim=-1, keepdim=True)
+        chosen.append(nxt)
         out = model(nxt, inference_params=ip, num_last_tokens=1)
         ip.seqlen_offset += 1
         logits = out.logits[:, -1, :]
+    chosen = torch.cat(chosen, dim=1)
+    fp_logits = torch.stack(kept, dim=0) if kept else logits.new_zeros((0, B, logits.shape[-1]))
     return chosen, fp_logits
 
-
 @torch.no_grad()
-def _policy_run(model, prompt_ids, chosen_tokens, policy_factory, max_seqlen):
-    """Teacher-forced decode of the SAME tokens with a StatePolicy attached.
-
-    Returns per-step policy logits aligned to the FP reference steps.
-    """
+def _policy_run(model, prompt_batch, chosen_tokens, policy_factory, max_seqlen, log_every):
+    B = prompt_batch.shape[0]
+    S = chosen_tokens.shape[1]
     handle = attach_state_policy(model, policy_factory)
     handle.reset()
     try:
-        ip = _make_inference_params(model, prompt_ids.shape[0], max_seqlen)
-        out = model(prompt_ids, inference_params=ip, num_last_tokens=1)
-        ip.seqlen_offset += prompt_ids.shape[1]
+        ip = _make_inference_params(model, B, max_seqlen)
+        out = model(prompt_batch, inference_params=ip, num_last_tokens=1)
+        ip.seqlen_offset += prompt_batch.shape[1]
         logits = out.logits[:, -1, :]
-        pol_logits = []
-        for tok_id in chosen_tokens:
-            pol_logits.append(logits[0])
-            nxt = torch.tensor([[tok_id]], device=prompt_ids.device)
+        kept = []
+        for t in range(S):
+            if (t + 1) % log_every == 0:
+                kept.append(logits)
+            nxt = chosen_tokens[:, t:t+1]
             out = model(nxt, inference_params=ip, num_last_tokens=1)
             ip.seqlen_offset += 1
             logits = out.logits[:, -1, :]
-        return pol_logits
+        return torch.stack(kept, dim=0) if kept else logits.new_zeros((0, B, logits.shape[-1]))
     finally:
         handle.remove()
+
+
+
 
 
 def _policy_factory(bits: int, refresh: int, seed: int,
@@ -199,35 +203,24 @@ def run_cuda(cfg: dict) -> dict:
     conditions = [(bw, rf) for bw in cfg["bit_widths"] for rf in cfg["refresh_intervals"]]
     results = {}
 
-    fp_cache = []
-    for prompt_ids in prompts:
-        msl = prompt_ids.shape[1] + max_new + 1
-        fp_cache.append(_fp_reference(model, prompt_ids, max_new, msl))
+    trunc = cfg.get('prompt_trunc', 64)
+    prompt_batch = torch.cat([p[:, -trunc:] for p in prompts], dim=0)
+    max_seqlen = trunc + max_new + 1
+    chosen, fp_logits = _fp_reference(model, prompt_batch, max_new, max_seqlen, log_every)
+    log_steps = [t + 1 for t in range(max_new) if (t + 1) % log_every == 0]
 
     for bits, refresh in conditions:
-        kl_accum = {}
-        for pi, prompt_ids in enumerate(prompts):
-            max_seqlen = prompt_ids.shape[1] + max_new + 1
-            chosen, fp_logits = fp_cache[pi]
-            if bits >= 16 and refresh == 0:
-                # FP-vs-FP control: KL must be ~0 everywhere (sanity).
-                pol_logits = fp_logits
-            else:
-                pol_logits = _policy_run(
-                    model, prompt_ids, chosen,
-                    _policy_factory(bits, refresh, cfg["seed"], cfg.get("quant_granularity","per_head"), cfg.get("quant_symmetric",True)), max_seqlen,
-                )
-            for t in range(max_new):
-                if (t + 1) % log_every == 0:
-                    kl = kl_divergence(fp_logits[t], pol_logits[t])
-                    kl_accum.setdefault(t + 1, []).append(kl)
-        steps = sorted(kl_accum)
-        kl_mean = [sum(kl_accum[s]) / len(kl_accum[s]) for s in steps]
-        results[f"bits{bits}_refresh{refresh}"] = {
-            "steps": steps, "kl_mean": kl_mean, "fit": fit_growth_exponent(steps, kl_mean),
-        }
-        print(f"  done bits={bits} refresh={refresh}: "
-              f"b={results[f'bits{bits}_refresh{refresh}']['fit']['exponent_b']:.3f}")
+        key = "bits" + str(bits) + "_refresh" + str(refresh)
+        if bits >= 16 and refresh == 0:
+            pol_logits = fp_logits
+        else:
+            pf = _policy_factory(bits, refresh, cfg["seed"], cfg.get("quant_granularity","per_head"), cfg.get("quant_symmetric",True))
+            pol_logits = _policy_run(model, prompt_batch, chosen, pf, max_seqlen, log_every)
+        steps = log_steps
+        kl_mean = [kl_divergence(fp_logits[i], pol_logits[i]) for i in range(len(steps))]
+        fit = fit_growth_exponent(steps, kl_mean)
+        results[key] = {"steps": steps, "kl_mean": kl_mean, "fit": fit}
+        print("  done " + key + ": b=" + format(fit["exponent_b"], ".3f"))
     return results
 
 
