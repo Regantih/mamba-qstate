@@ -10,7 +10,7 @@ State-space models (SSMs) such as Mamba-2 replace the Transformer KV cache with 
 single fixed-size **recurrent state** that is overwritten at every step. We ask
 whether post-training quantization of this state behaves like KV-cache
 quantization — where errors are assumed **local** — or whether the recurrent
-overwrite causes errors to **compound** over generation length. We find the answer depends on bit-width: 8-bit recurrent-state quantization is effectively lossless (no compounding, exponent b≈0), but 4-bit and 3-bit compound, with per-step KL(fp16||quant) growing super-linearly at short horizons (4-bit b≈1.1 at H=128) and terminal KL rising with horizon. A periodic full-precision refresh every k steps reverses the trend: at 4-bit/H=512, refreshing every 16 steps drives the growth exponent negative (b from +0.57 to -1.19) and cuts terminal KL ~130x (0.281 to 0.0022), recovering essentially all of the quality gap at roughly one extra full-precision state per 16 steps (~19% memory overhead over the 4-bit baseline).*
+overwrite causes errors to **compound** over generation length. We find the answer depends on bit-width: 8-bit recurrent-state quantization is effectively lossless (no compounding, exponent b≈0), but 4-bit and 3-bit compound, with per-step KL(fp16||quant) growing super-linearly at short horizons (4-bit b≈1.1 at H=128) and terminal KL rising with horizon. A periodic full-precision refresh every k steps reverses the trend: at 4-bit/H=512, periodic full-precision refresh drives the growth exponent monotonically negative as frequency rises (b = +0.66, -1.21, -1.74, -2.24 for k = 0, 16, 32, 64) and cuts terminal KL by 1-2 orders of magnitude, recovering essentially all of the quality gap at well under 1-3% memory overhead (3.13% at k=16, 1.56% at k=32, 0.78% at k=64 over the 4-bit baseline).*
 
 ## 1. Introduction & Contributions
 - **C1.** First systematic study of *recurrent-state* PTQ in Mamba-2 (8/4/3-bit).
@@ -40,7 +40,7 @@ overwrite causes errors to **compound** over generation length. We find the answ
 ## 4. Experimental Setup
 - Model: mamba2-1.3b (state-spaces). Greedy decoding, fixed seed 1337.
 - Data: 12 Pile (NeelNanda/pile-10k) prompts. Metric: per-step KL(fp16 || quant) of the recurrent-state-quantized model vs full precision.
-- Grid: bits ∈ {16,8,4,3} × horizon ∈ {128,512}, refresh=0; plus a refresh sweep (k ∈ {0,16,64}) at 4-bit, H=512.
+- Grid: bits ∈ {16,8,4,3} × horizon ∈ {128,512}, refresh=0; plus a refresh sweep (k ∈ {0,16,32,64}) at 4-bit, H=512.
 - Compute: single on-demand GPU (RunPod). Scripts: experiments/exp1_real_quant/{run,resume,refresh_sweep}.py; results under results/exp1/.
 
 ## 5. Results
@@ -93,11 +93,11 @@ overwrite causes errors to **compound** over generation length. We find the answ
   A periodic full-precision refresh of the
   recurrent state every k steps contains 4-bit
   compounding. Without refresh (k=0) the
-  exponent is b=0.57 with terminal KL 0.281.
+  exponent is b=0.66 with terminal KL-tail 0.312.
   Refreshing every 16 steps drops the exponent
-  to b=-1.19 and terminal KL to 0.0022 (about
-  130x lower); every 64 steps gives b=-2.43
-  and terminal KL 0.0010 (about 280x lower).
+  to b=-1.21 (KL-tail 0.0022); every 32 steps b=-1.74 (KL-tail
+  0.0023); every 64 steps gives b=-2.24
+  (KL-tail 0.0008). Overhead: 3.13%/1.56%/0.78% at k=16/32/64.
   A negative exponent means the periodic reset
   removes error faster than the recurrence
   accumulates it, so compounding is eliminated
@@ -106,7 +106,7 @@ overwrite causes errors to **compound** over generation length. We find the answ
 
 ## 6. Discussion & Limitations
 - When does compounding bite (length, task, bit-width)? Model-size sensitivity.
-- Limitations: model scale, PTQ-only (no QAT), task coverage.
+- Limitations: two model scales tested (1.3b primary, 370m scale check shows the 8-bit cliff is not fully scale-invariant), PTQ-only (no QAT), task coverage.
 
 ## 7. Future Work
 - **Hybrid Mamba-MLA (#25):** combine SSM recurrence with multi-head latent
