@@ -144,7 +144,7 @@ def _fp_reference(model, prompt_ids, max_new_tokens, max_seqlen):
     logits = out.logits[:, -1, :]                     # (1, vocab)
     chosen, fp_logits = [], []
     for _ in range(max_new_tokens):
-        fp_logits.append(logits[0].float().cpu())
+        fp_logits.append(logits[0])
         nxt = logits.argmax(dim=-1, keepdim=True)     # (1,1) greedy
         chosen.append(int(nxt.item()))
         out = model(nxt, inference_params=ip, num_last_tokens=1)
@@ -168,7 +168,7 @@ def _policy_run(model, prompt_ids, chosen_tokens, policy_factory, max_seqlen):
         logits = out.logits[:, -1, :]
         pol_logits = []
         for tok_id in chosen_tokens:
-            pol_logits.append(logits[0].float().cpu())
+            pol_logits.append(logits[0])
             nxt = torch.tensor([[tok_id]], device=prompt_ids.device)
             out = model(nxt, inference_params=ip, num_last_tokens=1)
             ip.seqlen_offset += 1
