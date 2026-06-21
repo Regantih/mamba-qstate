@@ -1,0 +1,12 @@
+run_name: exp0_quant_strong
+seed: 1337
+model: state-spaces/mamba2-1.3b
+max_new_tokens: 2048
+num_prompts: 32
+prompt_source: pile_val
+bit_widths: [16, 8, 4]
+quant_granularity: per_head
+quant_symmetric: true
+refresh_intervals: [0, 16, 64]
+log_every: 16
+out_dir: results/exp0
