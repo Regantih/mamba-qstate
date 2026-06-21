@@ -1,0 +1,31 @@
+{
+  "config": {
+    "model": "state-spaces/mamba2-1.3b",
+    "depth": 900,
+    "ntrial": 20,
+    "gen": 12,
+    "seed": 1337
+  },
+  "recall": {
+    "bits16": {
+      "hits": 20,
+      "trials": 20,
+      "acc": 1.0
+    },
+    "bits8": {
+      "hits": 20,
+      "trials": 20,
+      "acc": 1.0
+    },
+    "bits4": {
+      "hits": 9,
+      "trials": 20,
+      "acc": 0.45
+    },
+    "bits3": {
+      "hits": 11,
+      "trials": 20,
+      "acc": 0.55
+    }
+  }
+}

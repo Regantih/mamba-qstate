@@ -104,9 +104,12 @@ overwrite causes errors to **compound** over generation length. We find the answ
   even at low (k=64) refresh overhead.
 - **5.4 Ablations.** outliers, granularity.
 
+### 5.4 Downstream quality: long-context retrieval (NIAH)
+A needle-in-a-haystack test corroborates the perplexity frontier: a 4-digit code placed at the start of a ~900-token context must be reproduced after distractors (20 trials, greedy, seed 1337). Recall is 20/20 (1.00) at both 16-bit and 8-bit, drops to 9/20 (0.45) at 4-bit, and is 11/20 (0.55) at 3-bit. 8-bit state quantization preserves retrieval exactly as it preserves perplexity, whereas 4-bit compounding corrupts the stored fact in over half of trials; the 3-bit/4-bit gap is within noise at this sample size. Data: results/exp1/quality.json.
+
 ## 6. Discussion & Limitations
 - When does compounding bite (length, task, bit-width)? Model-size sensitivity.
-- Limitations: two model scales tested (1.3b primary, 370m scale check shows the 8-bit cliff is not fully scale-invariant), PTQ-only (no QAT), task coverage.
+- Limitations: two model scales tested (1.3b primary, 370m scale check shows the 8-bit cliff is not fully scale-invariant), PTQ-only (no QAT); quality measured by perplexity and a NIAH retrieval axis.
 
 ## 7. Future Work
 - **Hybrid Mamba-MLA (#25):** combine SSM recurrence with multi-head latent
