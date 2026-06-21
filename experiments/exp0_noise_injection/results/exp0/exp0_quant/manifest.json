@@ -1,0 +1,37 @@
+{
+  "run_name": "exp0_quant",
+  "seed": 1337,
+  "config": {
+    "run_name": "exp0_quant",
+    "seed": 1337,
+    "model": "state-spaces/mamba2-1.3b",
+    "device": "cuda",
+    "max_new_tokens": 512,
+    "num_prompts": 8,
+    "prompt_source": "pile_val",
+    "bit_widths": [
+      16,
+      8,
+      4
+    ],
+    "quant_granularity": "per_head",
+    "quant_symmetric": true,
+    "refresh_intervals": [
+      0,
+      16,
+      64
+    ],
+    "log_every": 8,
+    "out_dir": "results/exp0"
+  },
+  "git_sha": "358f049470098f75647daba384ca7c763ac9bb5c",
+  "gpu": "NVIDIA H100 80GB HBM3",
+  "packages": {
+    "python": "3.11.10",
+    "torch": "2.4.1+cu124",
+    "transformers": "4.43.3",
+    "numpy": "2.0.2",
+    "mamba_ssm": "2.2.2"
+  },
+  "timestamp_utc": "2026-06-21T01:45:52.591839+00:00"
+}
