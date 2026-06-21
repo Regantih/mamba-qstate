@@ -56,3 +56,27 @@ def fit_growth_exponent(steps, kl_values) -> dict[str, float]:
     ss_tot = ((lk - lk.mean()) ** 2).sum()
     r2 = 1.0 - ss_res / ss_tot if ss_tot > 0 else float("nan")
     return {"exponent_b": float(b), "prefactor_a": float(np.exp(loga)), "r2": float(r2)}
+
+
+def perplexity(logits, target_ids):
+    # token-level perplexity; lower is better
+    import torch
+    import torch.nn.functional as F
+    if logits.dim() == 2:
+        logits = logits.unsqueeze(0)
+        target_ids = target_ids.unsqueeze(0)
+    logp = F.log_softmax(logits.float(), dim=-1)
+    nll = -logp.gather(-1, target_ids.unsqueeze(-1)).squeeze(-1)
+    return float(torch.exp(nll.mean()).item())
+
+
+def retrieval_accuracy(predictions, references):
+    # exact-match accuracy for long-context retrieval; case-insensitive substring match
+    def _norm(s):
+        return ' '.join(str(s).strip().lower().split())
+    preds = [_norm(p) for p in predictions]
+    refs = [_norm(r) for r in references]
+    if not refs:
+        return float('nan')
+    hits = sum(1 for p, r in zip(preds, refs) if r and r in p)
+    return hits / len(refs)
