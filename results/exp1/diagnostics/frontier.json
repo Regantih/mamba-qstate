@@ -1,0 +1,42 @@
+{
+  "model": "state-spaces/mamba2-1.3b",
+  "data": "NeelNanda/pile-10k",
+  "n_prompts": 8,
+  "seq_len": 256,
+  "metric": "per-token PPL under recurrent-state quant",
+  "baseline_ppl_fp16": 10.512,
+  "frontier": [
+    {
+      "bits": 16,
+      "compression_x": 1.0,
+      "ppl": 10.512,
+      "ppl_delta_pct": 0.0,
+      "terminal_kl_h512": 0.0,
+      "lossless": true
+    },
+    {
+      "bits": 8,
+      "compression_x": 2.0,
+      "ppl": 10.545,
+      "ppl_delta_pct": 0.3,
+      "terminal_kl_h512": 0.0039,
+      "lossless": true
+    },
+    {
+      "bits": 4,
+      "compression_x": 4.0,
+      "ppl": 29.189,
+      "ppl_delta_pct": 177.7,
+      "terminal_kl_h512": 0.1311,
+      "lossless": false
+    },
+    {
+      "bits": 3,
+      "compression_x": 5.33,
+      "ppl": 23.694,
+      "ppl_delta_pct": 125.4,
+      "terminal_kl_h512": 1.8004,
+      "lossless": false
+    }
+  ]
+}
